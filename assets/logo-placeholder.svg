@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+  <title id="title">TeamLoop logo placeholder</title>
+  <desc id="desc">A calm green loop around a small land-colored circle beside the TeamLoop wordmark.</desc>
+  <rect width="640" height="180" rx="32" fill="#F7FAF4"/>
+  <circle cx="90" cy="90" r="48" fill="none" stroke="#5F9F68" stroke-width="18"/>
+  <path d="M126 54c14 10 22 22 24 36" fill="none" stroke="#DDEED3" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="90" cy="90" r="14" fill="#D8C7A3"/>
+  <text x="168" y="109" fill="#1F2A1F" font-family="Inter, system-ui, sans-serif" font-size="64" font-weight="700">TeamLoop</text>
+</svg>
