@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: TeamLoop discussions
+    url: https://github.com/ayushhagarwal/teamloop/discussions
+    about: Ask setup questions, share ideas, and show how your team uses TeamLoop.
+  - name: Security report
+    url: https://github.com/ayushhagarwal/teamloop/security/advisories/new
+    about: Privately report a security vulnerability.

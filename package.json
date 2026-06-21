@@ -1,0 +1,73 @@
+{
+  "name": "teamloop",
+  "version": "1.0.0",
+  "description": "Open-source Slack bot for planning real-world team activities.",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://github.com/ayushhagarwal/teamloop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayushhagarwal/teamloop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ayushhagarwal/teamloop/issues"
+  },
+  "keywords": [
+    "slack",
+    "slack-bot",
+    "slack-bolt",
+    "team-activities",
+    "event-planning",
+    "rsvp",
+    "potluck",
+    "team-lunch",
+    "running",
+    "hyrox",
+    "typescript",
+    "postgresql",
+    "prisma",
+    "open-source"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/src/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.10.1",
+    "@slack/bolt": "^4.4.0",
+    "@slack/oauth": "^3.0.5",
+    "@slack/types": "^2.21.1",
+    "@slack/web-api": "^7.17.0",
+    "dotenv": "^16.5.0",
+    "node-cron": "^4.1.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/node": "^22.15.32",
+    "@types/node-cron": "^3.0.11",
+    "eslint": "^9.29.0",
+    "prettier": "^3.5.3",
+    "prisma": "^6.10.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.1",
+    "vitest": "^4.1.9"
+  }
+}

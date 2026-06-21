@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventType {
+  LUNCH
+  DINNER
+  POTLUCK
+  WEEKEND_RUN
+  MARATHON
+  HYROX
+}
+
+enum EventStatus {
+  OPEN
+  RSVP_CLOSED
+  CANCELLED
+  COMPLETED
+}
+
+enum RsvpStatus {
+  GOING
+  MAYBE
+  CANNOT_MAKE_IT
+}
+
+enum ReminderType {
+  RSVP_DEADLINE
+  EVENT_START
+  MANUAL
+}
+
+enum ReminderStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model Workspace {
+  id                       String     @id @default(cuid())
+  slackTeamId              String     @unique
+  name                     String?
+  botUserId                String?
+  installedBySlackUserId   String?
+  accessToken              String?
+  uninstalledAt            DateTime?
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+  channels                 Channel[]
+  events                   Event[]
+  auditLogs                AuditLog[]
+}
+
+model Channel {
+  id             String    @id @default(cuid())
+  slackChannelId String
+  workspaceId    String
+  name           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  events         Event[]
+
+  @@unique([workspaceId, slackChannelId])
+}
+
+model Event {
+  id                   String       @id @default(cuid())
+  workspaceId          String
+  channelId            String
+  organizerSlackUserId String
+  type                 EventType
+  title                String
+  description          String?
+  location             String?
+  eventStartsAt        DateTime
+  rsvpDeadlineAt       DateTime?
+  status               EventStatus  @default(OPEN)
+  slackMessageTs       String?
+  slackChannelId       String
+  metadata             Json         @default("{}")
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  cancelledAt          DateTime?
+  closedAt             DateTime?
+  workspace            Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  channel              Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  rsvps                RSVP[]
+  preferences          Preference[]
+  potluckItems         PotluckItem[]
+  reminders            Reminder[]
+  auditLogs            AuditLog[]
+
+  @@index([workspaceId, status])
+  @@index([eventStartsAt])
+}
+
+model RSVP {
+  id          String     @id @default(cuid())
+  eventId     String
+  slackUserId String
+  status      RsvpStatus
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, slackUserId])
+  @@index([eventId, status])
+}
+
+model Preference {
+  id          String   @id @default(cuid())
+  eventId     String
+  slackUserId String
+  key         String
+  value       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, slackUserId, key])
+}
+
+model PotluckItem {
+  id                     String   @id @default(cuid())
+  eventId                String
+  category               String
+  itemName               String
+  claimedBySlackUserId   String?
+  servesCount            Int?
+  dietaryType            String?
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  event                   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, category])
+}
+
+model Reminder {
+  id           String         @id @default(cuid())
+  eventId      String
+  type         ReminderType
+  scheduledFor DateTime
+  sentAt       DateTime?
+  status       ReminderStatus @default(PENDING)
+  attemptCount Int            @default(0)
+  lastError    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  event        Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+  @@unique([eventId, type, scheduledFor])
+}
+
+model AuditLog {
+  id                   String     @id @default(cuid())
+  workspaceId          String
+  eventId              String?
+  actorSlackUserId     String?
+  action               String
+  metadata             Json       @default("{}")
+  createdAt            DateTime   @default(now())
+  workspace            Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  event                Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([eventId])
+}
