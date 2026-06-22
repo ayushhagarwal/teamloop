@@ -55,7 +55,7 @@
     "@slack/types": "^2.21.1",
     "@slack/web-api": "^7.17.0",
     "dotenv": "^16.5.0",
-    "node-cron": "^4.1.1",
+    "node-cron": "^4.5.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
