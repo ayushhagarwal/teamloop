@@ -52,6 +52,23 @@ describe("event card blocks", () => {
     expect(output).toContain("Beginner-friendly");
   });
 
+  it("escapes user-controlled metadata before rendering mrkdwn", () => {
+    const output = text(
+      renderEventCard(
+        eventFixture({
+          type: EventType.WEEKEND_RUN,
+          metadata: {
+            distance: "<@channel>",
+            pace: "<https://example.invalid|click>",
+          },
+        }),
+      ),
+    );
+    expect(output).toContain("&lt;@channel&gt;");
+    expect(output).toContain("&lt;https://example.invalid|click&gt;");
+    expect(output).not.toContain('\\"text\\":\\"Distance: <@channel>');
+  });
+
   it("renders cancelled and closed states", () => {
     expect(
       text(renderEventCard(eventFixture({ status: EventStatus.CANCELLED }))),

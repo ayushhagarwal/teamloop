@@ -6,6 +6,7 @@ import type { Logger } from "../config/logger.js";
 import { ReminderService } from "../services/reminder.service.js";
 import { WorkspaceService } from "../services/workspace.service.js";
 import { slackTime } from "../utils/date.js";
+import { escapeMrkdwn } from "../utils/text.js";
 
 export function startReminderJob(
   reminders: ReminderService,
@@ -52,12 +53,12 @@ function reminderText(
   event: { title: string; location: string | null; eventStartsAt: Date },
 ): string {
   if (type === ReminderType.RSVP_DEADLINE) {
-    return `⏰ Reminder: RSVP for *${event.title}* soon.`;
+    return `⏰ Reminder: RSVP for *${escapeMrkdwn(event.title)}* soon.`;
   }
   if (type === ReminderType.EVENT_START) {
-    return `📍 *${event.title}* starts ${slackTime(event.eventStartsAt)}${
-      event.location ? ` at ${event.location}` : ""
+    return `📍 *${escapeMrkdwn(event.title)}* starts ${slackTime(event.eventStartsAt)}${
+      event.location ? ` at ${escapeMrkdwn(event.location)}` : ""
     }. See you there!`;
   }
-  return `🔔 Reminder: Please update your RSVP for *${event.title}*.`;
+  return `🔔 Reminder: Please update your RSVP for *${escapeMrkdwn(event.title)}*.`;
 }

@@ -59,6 +59,17 @@ const envSchema = z
         message: "OAuth mode requires a base64-encoded 32-byte encryption key.",
       });
     }
+    if (
+      value.NODE_ENV === "production" &&
+      value.SLACK_CLIENT_ID &&
+      new URL(value.APP_BASE_URL).protocol !== "https:"
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["APP_BASE_URL"],
+        message: "APP_BASE_URL must use HTTPS in production OAuth mode.",
+      });
+    }
   });
 
 export type Env = z.infer<typeof envSchema>;
@@ -76,9 +87,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
 
 function isEncryptionKey(value: string | undefined): boolean {
   if (!value) return false;
-  try {
-    return Buffer.from(value, "base64").length === 32;
-  } catch {
-    return false;
-  }
+  if (!/^[A-Za-z0-9+/]{43}=$/.test(value)) return false;
+  return Buffer.from(value, "base64").length === 32;
 }

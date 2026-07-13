@@ -3,8 +3,9 @@
 ## Reporting a vulnerability
 
 Please do not open a public issue for a vulnerability involving Slack tokens,
-request verification, authorization, data exposure, or injection. Send a
-private report to the security contact listed by the repository owner with:
+request verification, authorization, data exposure, or injection. Use
+[GitHub private vulnerability reporting](https://github.com/ayushhagarwal/teamloop/security/advisories/new)
+with:
 
 - affected version or commit;
 - reproduction steps;
