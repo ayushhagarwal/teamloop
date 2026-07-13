@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24 LTS (use `nvm use` from the repository root)
 - Docker and Docker Compose
 - A Slack development workspace
 - ngrok or another HTTPS tunnel
