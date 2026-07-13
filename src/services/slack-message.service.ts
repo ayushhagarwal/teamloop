@@ -1,12 +1,13 @@
 import type { WebClient } from "@slack/web-api";
 import { renderEventCard } from "../blocks/event-card.blocks.js";
 import type { EventWithRelations } from "../types/event.types.js";
+import { escapeMrkdwn } from "../utils/text.js";
 
 export class SlackMessageService {
   async postEvent(client: WebClient, event: EventWithRelations) {
     return client.chat.postMessage({
       channel: event.slackChannelId,
-      text: `${event.title} — TeamLoop event`,
+      text: `${escapeMrkdwn(event.title)} — TeamLoop event`,
       blocks: renderEventCard(event),
       unfurl_links: false,
       unfurl_media: false,
@@ -18,7 +19,7 @@ export class SlackMessageService {
     await client.chat.update({
       channel: event.slackChannelId,
       ts: event.slackMessageTs,
-      text: `${event.title} — TeamLoop event`,
+      text: `${escapeMrkdwn(event.title)} — TeamLoop event`,
       blocks: renderEventCard(event),
     });
   }

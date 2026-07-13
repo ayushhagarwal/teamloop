@@ -8,6 +8,7 @@ import { ReminderService } from "../services/reminder.service.js";
 import { SlackMessageService } from "../services/slack-message.service.js";
 import { slackTime } from "../utils/date.js";
 import { toUserMessage } from "../utils/errors.js";
+import { escapeMrkdwn } from "../utils/text.js";
 import { eventInputSchema, formatZodErrors } from "../utils/validation.js";
 import { extractActivityValues } from "../modals/shared.modal.js";
 import { parseActionValue } from "./helpers.js";
@@ -112,7 +113,7 @@ export function registerOrganizerActions(
         await client.chat.postMessage({
           channel: event.slackChannelId,
           ...(event.slackMessageTs ? { thread_ts: event.slackMessageTs } : {}),
-          text: `🔔 Reminder from <@${body.user.id}>: Please update your RSVP for *${event.title}*. The event starts ${slackTime(event.eventStartsAt)}.`,
+          text: `🔔 Reminder from <@${body.user.id}>: Please update your RSVP for *${escapeMrkdwn(event.title)}*. The event starts ${slackTime(event.eventStartsAt)}.`,
         });
         await reminders.markSent(reminder.id);
       } catch (error) {

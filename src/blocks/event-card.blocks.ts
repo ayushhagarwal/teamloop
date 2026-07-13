@@ -281,8 +281,8 @@ function yesNo(value: EventMetadata[string] | undefined): string {
 
 function display(value: EventMetadata[string] | undefined, fallback: string): string {
   if (value === undefined || value === null || value === "") return fallback;
-  if (Array.isArray(value)) return value.join(", ");
-  return String(value);
+  if (Array.isArray(value)) return value.map((item) => escapeMrkdwn(item)).join(", ");
+  return escapeMrkdwn(String(value));
 }
 
 function showsPreferenceAction(type: EventType, metadata: EventMetadata): boolean {
