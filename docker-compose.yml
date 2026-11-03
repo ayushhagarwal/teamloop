@@ -4,9 +4,7 @@ services:
     environment:
       POSTGRES_DB: teamloop
       POSTGRES_USER: teamloop
-      POSTGRES_PASSWORD: teamloop
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
       - teamloop-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +18,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://teamloop:teamloop@postgres:5432/teamloop?schema=public
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
       NODE_ENV: production
       PORT: 3000
     ports:

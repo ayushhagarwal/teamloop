@@ -1,6 +1,7 @@
 import { EventType } from "@prisma/client";
 import type { ModalView } from "@slack/types";
 import type { EventWithRelations } from "../types/event.types.js";
+import { FIELD_LIMITS } from "../utils/limits.js";
 
 const options: Record<EventType, string[]> = {
   LUNCH: ["Veg", "Non-veg", "Vegan", "No preference"],
@@ -73,6 +74,7 @@ export function buildPreferenceModal(event: EventWithRelations): ModalView {
               element: {
                 type: "plain_text_input" as const,
                 action_id: "value",
+                max_length: FIELD_LIMITS.marathonPaceNote,
                 placeholder: {
                   type: "plain_text" as const,
                   text: "Optional, e.g. 5:45/km",

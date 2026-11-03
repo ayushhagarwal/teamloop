@@ -17,6 +17,12 @@ export interface StoredInstallation {
   botToken: string;
 }
 
+interface TokenPayload {
+  iv: Buffer;
+  tag: Buffer;
+  encrypted: Buffer;
+}
+
 export class WorkspaceService {
   constructor(
     private readonly db: PrismaClient,
@@ -24,13 +30,13 @@ export class WorkspaceService {
   ) {}
 
   async saveInstallation(input: InstallationRecord): Promise<void> {
-    await this.db.workspace.upsert({
+    const key = this.keyOrThrow("store");
+    const workspace = await this.db.workspace.upsert({
       where: { slackTeamId: input.teamId },
       update: {
         ...(input.teamName ? { name: input.teamName } : {}),
         ...(input.botUserId ? { botUserId: input.botUserId } : {}),
         ...(input.installedBy ? { installedBySlackUserId: input.installedBy } : {}),
-        accessToken: this.encrypt(input.botToken),
         uninstalledAt: null,
       },
       create: {
@@ -38,33 +44,38 @@ export class WorkspaceService {
         ...(input.teamName ? { name: input.teamName } : {}),
         ...(input.botUserId ? { botUserId: input.botUserId } : {}),
         ...(input.installedBy ? { installedBySlackUserId: input.installedBy } : {}),
-        accessToken: this.encrypt(input.botToken),
       },
+      select: { id: true },
+    });
+    await this.db.workspace.update({
+      where: { id: workspace.id },
+      data: { accessToken: this.encrypt(input.botToken, workspace.id, key) },
     });
   }
 
   async getBotToken(teamId: string): Promise<string | null> {
     const workspace = await this.db.workspace.findUnique({
       where: { slackTeamId: teamId },
-      select: { accessToken: true, uninstalledAt: true },
+      select: { id: true, accessToken: true, uninstalledAt: true },
     });
     if (!workspace?.accessToken || workspace.uninstalledAt) return null;
-    return this.decrypt(workspace.accessToken);
+    return this.decrypt(workspace.accessToken, workspace.id);
   }
 
   async getBotTokenByWorkspaceId(workspaceId: string): Promise<string | null> {
     const workspace = await this.db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { accessToken: true, uninstalledAt: true },
+      select: { id: true, accessToken: true, uninstalledAt: true },
     });
     if (!workspace?.accessToken || workspace.uninstalledAt) return null;
-    return this.decrypt(workspace.accessToken);
+    return this.decrypt(workspace.accessToken, workspace.id);
   }
 
   async getInstallation(teamId: string): Promise<StoredInstallation | null> {
     const workspace = await this.db.workspace.findUnique({
       where: { slackTeamId: teamId },
       select: {
+        id: true,
         slackTeamId: true,
         name: true,
         botUserId: true,
@@ -81,7 +92,7 @@ export class WorkspaceService {
       ...(workspace.installedBySlackUserId
         ? { installedBy: workspace.installedBySlackUserId }
         : {}),
-      botToken: this.decrypt(workspace.accessToken),
+      botToken: this.decrypt(workspace.accessToken, workspace.id),
     };
   }
 
@@ -106,14 +117,10 @@ export class WorkspaceService {
     ]);
   }
 
-  private encrypt(value: string): string {
-    if (!this.encryptionKey) return value;
-    const key = Buffer.from(this.encryptionKey, "base64");
-    if (key.length !== 32) {
-      throw new Error("TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key.");
-    }
+  private encrypt(value: string, workspaceId: string, key: Buffer): string {
     const iv = randomBytes(12);
     const cipher = createCipheriv("aes-256-gcm", key, iv);
+    cipher.setAAD(Buffer.from(workspaceId, "utf8"));
     const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
     return [
       "v1",
@@ -123,24 +130,65 @@ export class WorkspaceService {
     ].join(".");
   }
 
-  private decrypt(value: string): string {
-    if (!value.startsWith("v1.")) return value;
-    if (!this.encryptionKey) {
-      throw new Error("TOKEN_ENCRYPTION_KEY is required to decrypt OAuth tokens.");
+  private decrypt(value: string, workspaceId: string): string {
+    const payload = this.parsePayload(value);
+    const key = this.keyOrThrow("decrypt");
+    try {
+      return this.open(payload, key, workspaceId);
+    } catch {
+      try {
+        return this.open(payload, key);
+      } catch {
+        throw new Error("Invalid token payload.");
+      }
     }
-    const [, ivValue, tagValue, encryptedValue] = value.split(".");
-    if (!ivValue || !tagValue || !encryptedValue)
-      throw new Error("Invalid token payload.");
-    const key = Buffer.from(this.encryptionKey, "base64");
-    const decipher = createDecipheriv(
-      "aes-256-gcm",
-      key,
-      Buffer.from(ivValue, "base64"),
-    );
-    decipher.setAuthTag(Buffer.from(tagValue, "base64"));
+  }
+
+  private open(payload: TokenPayload, key: Buffer, workspaceId?: string): string {
+    const decipher = createDecipheriv("aes-256-gcm", key, payload.iv);
+    if (workspaceId !== undefined) {
+      decipher.setAAD(Buffer.from(workspaceId, "utf8"));
+    }
+    decipher.setAuthTag(payload.tag);
     return Buffer.concat([
-      decipher.update(Buffer.from(encryptedValue, "base64")),
+      decipher.update(payload.encrypted),
       decipher.final(),
     ]).toString("utf8");
   }
+
+  private parsePayload(value: string): TokenPayload {
+    const parts = value.split(".");
+    if (parts.length !== 4 || parts[0] !== "v1") {
+      throw new Error("Invalid token payload.");
+    }
+    const iv = decodePart(parts[1]);
+    const tag = decodePart(parts[2]);
+    const encrypted = decodePart(parts[3]);
+    if (!iv || !tag || !encrypted || iv.length !== 12 || tag.length !== 16) {
+      throw new Error("Invalid token payload.");
+    }
+    return { iv, tag, encrypted };
+  }
+
+  private keyOrThrow(purpose: "store" | "decrypt"): Buffer {
+    if (!this.encryptionKey) {
+      throw new Error(
+        purpose === "store"
+          ? "TOKEN_ENCRYPTION_KEY is required to store OAuth tokens."
+          : "TOKEN_ENCRYPTION_KEY is required to decrypt OAuth tokens.",
+      );
+    }
+    const key = Buffer.from(this.encryptionKey, "base64");
+    if (key.length !== 32) {
+      throw new Error("TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key.");
+    }
+    return key;
+  }
+}
+
+function decodePart(value: string | undefined): Buffer | undefined {
+  if (!value || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return undefined;
+  const buffer = Buffer.from(value, "base64");
+  if (buffer.length === 0) return undefined;
+  return buffer;
 }

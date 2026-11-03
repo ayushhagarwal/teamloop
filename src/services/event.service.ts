@@ -95,9 +95,9 @@ export class EventService {
     });
   }
 
-  async getById(eventId: string): Promise<EventWithRelations> {
-    const event = await this.db.event.findUnique({
-      where: { id: eventId },
+  async getById(eventId: string, slackTeamId: string): Promise<EventWithRelations> {
+    const event = await this.db.event.findFirst({
+      where: { id: eventId, workspace: { slackTeamId } },
       include: this.relations(),
     });
     if (!event) throw new NotFoundError();
@@ -106,10 +106,11 @@ export class EventService {
 
   async update(
     eventId: string,
+    slackTeamId: string,
     actorSlackUserId: string,
     input: UpdateEventInput,
   ): Promise<EventWithRelations> {
-    const existing = await this.getById(eventId);
+    const existing = await this.getById(eventId, slackTeamId);
     this.permissions.assertOrganizer(existing, actorSlackUserId);
 
     return this.db.$transaction(async (tx) => {
@@ -144,9 +145,10 @@ export class EventService {
 
   async closeRsvp(
     eventId: string,
+    slackTeamId: string,
     actorSlackUserId: string,
   ): Promise<EventWithRelations> {
-    const existing = await this.getById(eventId);
+    const existing = await this.getById(eventId, slackTeamId);
     this.permissions.assertOrganizer(existing, actorSlackUserId);
 
     return this.transition(existing, actorSlackUserId, EventStatus.RSVP_CLOSED, {
@@ -155,8 +157,12 @@ export class EventService {
     });
   }
 
-  async cancel(eventId: string, actorSlackUserId: string): Promise<EventWithRelations> {
-    const existing = await this.getById(eventId);
+  async cancel(
+    eventId: string,
+    slackTeamId: string,
+    actorSlackUserId: string,
+  ): Promise<EventWithRelations> {
+    const existing = await this.getById(eventId, slackTeamId);
     this.permissions.assertOrganizer(existing, actorSlackUserId);
 
     return this.db.$transaction(async (tx) => {

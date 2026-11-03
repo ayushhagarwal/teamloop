@@ -59,15 +59,12 @@ const envSchema = z
         message: "OAuth mode requires a base64-encoded 32-byte encryption key.",
       });
     }
-    if (
-      value.NODE_ENV === "production" &&
-      value.SLACK_CLIENT_ID &&
-      new URL(value.APP_BASE_URL).protocol !== "https:"
-    ) {
+    if (value.SLACK_CLIENT_ID && !isHttpsOrLocalHttp(value.APP_BASE_URL)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["APP_BASE_URL"],
-        message: "APP_BASE_URL must use HTTPS in production OAuth mode.",
+        message:
+          "APP_BASE_URL must use HTTPS when OAuth is configured. HTTP is allowed only for localhost and 127.0.0.1.",
       });
     }
   });
@@ -89,4 +86,11 @@ function isEncryptionKey(value: string | undefined): boolean {
   if (!value) return false;
   if (!/^[A-Za-z0-9+/]{43}=$/.test(value)) return false;
   return Buffer.from(value, "base64").length === 32;
+}
+
+function isHttpsOrLocalHttp(value: string): boolean {
+  const url = new URL(value);
+  if (url.protocol === "https:") return true;
+  if (url.protocol !== "http:") return false;
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1";
 }

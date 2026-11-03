@@ -11,7 +11,7 @@ import { toUserMessage } from "../utils/errors.js";
 import { escapeMrkdwn } from "../utils/text.js";
 import { eventInputSchema, formatZodErrors } from "../utils/validation.js";
 import { extractActivityValues } from "../modals/shared.modal.js";
-import { parseActionValue } from "./helpers.js";
+import { parseActionValue, signedSlackTeamId } from "./helpers.js";
 
 export function registerOrganizerActions(
   app: App,
@@ -24,7 +24,10 @@ export function registerOrganizerActions(
   app.action("view_summary", async ({ ack, action, body, client, respond }) => {
     await ack();
     try {
-      const event = await events.getById(parseActionValue(action).eventId);
+      const event = await events.getById(
+        parseActionValue(action).eventId,
+        signedSlackTeamId(body),
+      );
       await client.chat.postEphemeral({
         channel: event.slackChannelId,
         user: body.user.id,
@@ -39,7 +42,10 @@ export function registerOrganizerActions(
   app.action("edit_event", async ({ ack, action, body, client, respond }) => {
     await ack();
     try {
-      const event = await events.getById(parseActionValue(action).eventId);
+      const event = await events.getById(
+        parseActionValue(action).eventId,
+        signedSlackTeamId(body),
+      );
       permissions.assertOrganizer(event, body.user.id);
       if (!("trigger_id" in body) || typeof body.trigger_id !== "string") {
         throw new Error("Missing trigger ID");
@@ -65,7 +71,7 @@ export function registerOrganizerActions(
     }
     await ack();
     const { eventId } = JSON.parse(view.private_metadata) as { eventId: string };
-    const event = await events.update(eventId, body.user.id, {
+    const event = await events.update(eventId, signedSlackTeamId(body), body.user.id, {
       title: parsed.data.title,
       location: parsed.data.location,
       description: parsed.data.notes || null,
@@ -80,6 +86,7 @@ export function registerOrganizerActions(
     try {
       const event = await events.closeRsvp(
         parseActionValue(action).eventId,
+        signedSlackTeamId(body),
         body.user.id,
       );
       await messages.updateEvent(client, event);
@@ -92,7 +99,11 @@ export function registerOrganizerActions(
   app.action("cancel_event", async ({ ack, action, body, client, respond }) => {
     await ack();
     try {
-      const event = await events.cancel(parseActionValue(action).eventId, body.user.id);
+      const event = await events.cancel(
+        parseActionValue(action).eventId,
+        signedSlackTeamId(body),
+        body.user.id,
+      );
       await messages.updateEvent(client, event);
       await respond({
         response_type: "ephemeral",
@@ -106,7 +117,10 @@ export function registerOrganizerActions(
   app.action("send_reminder", async ({ ack, action, body, client, respond }) => {
     await ack();
     try {
-      const event = await events.getById(parseActionValue(action).eventId);
+      const event = await events.getById(
+        parseActionValue(action).eventId,
+        signedSlackTeamId(body),
+      );
       permissions.assertOrganizer(event, body.user.id);
       const reminder = await reminders.createManual(event.id);
       try {

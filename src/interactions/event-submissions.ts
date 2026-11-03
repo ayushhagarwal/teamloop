@@ -15,6 +15,7 @@ import { ReminderService } from "../services/reminder.service.js";
 import { SlackMessageService } from "../services/slack-message.service.js";
 import type { EventMetadata } from "../types/event.types.js";
 import type { CommandMetadata } from "../types/slack.types.js";
+import { limitedActivityFieldErrors } from "../utils/limits.js";
 import {
   eventInputSchema,
   formatZodErrors,
@@ -40,7 +41,7 @@ export function registerEventSubmissionHandlers(
     app.view(config.callbackId, async ({ ack, body, view, client, logger }) => {
       const raw = extractActivityValues(view.state.values, config.fields);
       const parsed = eventInputSchema.safeParse(raw);
-      const customErrors = activityErrors(type, raw);
+      const customErrors = activityFieldErrors(type, raw);
       if (!parsed.success || Object.keys(customErrors).length) {
         await ack({
           response_action: "errors",
@@ -101,18 +102,19 @@ export function registerEventSubmissionHandlers(
   }
 }
 
-function activityErrors(
+export function activityFieldErrors(
   type: EventType,
   raw: Record<string, string>,
 ): Record<string, string> {
+  const errors = limitedActivityFieldErrors(raw);
   if (
     (type === EventType.WEEKEND_RUN || type === EventType.MARATHON) &&
     raw.distance === "Custom" &&
     !raw.customDistance?.trim()
   ) {
-    return { customDistance: "Enter a custom distance." };
+    errors.customDistance = "Enter a custom distance.";
   }
-  return {};
+  return errors;
 }
 
 function buildMetadata(type: EventType, raw: Record<string, string>): EventMetadata {

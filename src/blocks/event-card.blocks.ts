@@ -2,6 +2,7 @@ import { EventStatus, EventType, RsvpStatus, type Preference } from "@prisma/cli
 import type { KnownBlock } from "@slack/types";
 import type { EventMetadata, EventWithRelations } from "../types/event.types.js";
 import { slackDate } from "../utils/date.js";
+import { FIELD_LIMITS } from "../utils/limits.js";
 import { escapeMrkdwn, titleCase, truncate } from "../utils/text.js";
 import { button, contextBlock, divider, mrkdwnSection } from "./shared.blocks.js";
 
@@ -203,7 +204,10 @@ function activityDetail(
         ]
           .filter(Boolean)
           .join(" · ");
-        return `• *${escapeMrkdwn(item.category)}:* ${escapeMrkdwn(item.itemName)}${by}${detail ? ` _(${escapeMrkdwn(detail)})_` : ""}`;
+        const itemName = escapeMrkdwn(
+          truncate(item.itemName, FIELD_LIMITS.potluckItemName),
+        );
+        return `• *${escapeMrkdwn(item.category)}:* ${itemName}${by}${detail ? ` _(${escapeMrkdwn(detail)})_` : ""}`;
       });
       const needed = Array.isArray(metadata.neededCategories)
         ? metadata.neededCategories.filter(
@@ -225,16 +229,18 @@ function activityDetail(
     case EventType.WEEKEND_RUN:
       return compactLines([
         "*🏃 Run details*",
-        `Distance: ${display(metadata.distance, "Flexible")} · Pace: ${display(metadata.pace, "Mixed groups")}`,
+        `Distance: ${limitedDisplay(metadata.distance, "Flexible", FIELD_LIMITS.customDistance)} · Pace: ${display(metadata.pace, "Mixed groups")}`,
         `Beginner-friendly: ${yesNo(metadata.beginnerFriendly)}`,
-        metadata.routeLink ? `Route: ${display(metadata.routeLink, "")}` : "",
+        metadata.routeLink
+          ? `Route: ${limitedDisplay(metadata.routeLink, "", FIELD_LIMITS.routeLink)}`
+          : "",
         preferenceSummary,
       ]);
     case EventType.MARATHON:
       return compactLines([
         "*🏅 Marathon plan*",
         metadata.raceName ? `Race: ${escapeMrkdwn(String(metadata.raceName))}` : "",
-        `Distance: ${display(metadata.distance, "Flexible")}${
+        `Distance: ${limitedDisplay(metadata.distance, "Flexible", FIELD_LIMITS.customDistance)}${
           metadata.targetPace
             ? ` · Target pace: ${display(metadata.targetPace, "")}`
             : ""
@@ -256,11 +262,15 @@ function summarizePreferences(preferences: Preference[]): string {
   if (!preferences.length) return "";
   const counts = new Map<string, number>();
   for (const preference of preferences) {
+    const paceNote =
+      preference.key === "targetPace"
+        ? truncate(preference.value, FIELD_LIMITS.marathonPaceNote)
+        : preference.value;
     const label =
       preference.key === "plusOne"
         ? `Plus-one ${preference.value}`
         : preference.key === "targetPace"
-          ? `Pace ${preference.value}`
+          ? `Pace ${paceNote}`
           : preference.value;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
@@ -283,6 +293,18 @@ function display(value: EventMetadata[string] | undefined, fallback: string): st
   if (value === undefined || value === null || value === "") return fallback;
   if (Array.isArray(value)) return value.map((item) => escapeMrkdwn(item)).join(", ");
   return escapeMrkdwn(String(value));
+}
+
+function limitedDisplay(
+  value: EventMetadata[string] | undefined,
+  fallback: string,
+  maxLength: number,
+): string {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (Array.isArray(value)) {
+    return value.map((item) => escapeMrkdwn(truncate(item, maxLength))).join(", ");
+  }
+  return escapeMrkdwn(truncate(String(value), maxLength));
 }
 
 function showsPreferenceAction(type: EventType, metadata: EventMetadata): boolean {

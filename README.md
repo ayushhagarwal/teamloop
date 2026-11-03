@@ -64,7 +64,7 @@ public HTTPS tunnel such as ngrok.
 
 ```bash
 cp .env.example .env
-# Add SLACK_SIGNING_SECRET and SLACK_BOT_TOKEN to .env
+# Add Slack credentials. Replace CHANGE_ME in POSTGRES_PASSWORD and DATABASE_URL.
 docker compose up --build
 ```
 
@@ -87,10 +87,9 @@ Follow the full [Slack app setup guide](docs/slack-app-setup.md).
 
 ```bash
 npm install
-docker compose up -d postgres
 cp .env.example .env
-npm run prisma:migrate
-npm run dev
+# Add Slack credentials. Replace CHANGE_ME in POSTGRES_PASSWORD and DATABASE_URL.
+docker compose up --build
 ```
 
 Useful commands:
@@ -120,8 +119,9 @@ TeamLoop then exposes:
 - `/slack/oauth_redirect`
 - `/slack/events`
 
-Workspace bot tokens are encrypted with AES-256-GCM when
-`TOKEN_ENCRYPTION_KEY` is configured.
+Workspace bot tokens are stored only as AES-256-GCM ciphertext bound to the
+workspace. TeamLoop refuses to save a token when `TOKEN_ENCRYPTION_KEY` is
+absent. Ciphertext written before that binding still decrypts.
 
 ## Environment variables
 

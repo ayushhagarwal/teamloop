@@ -17,7 +17,9 @@ file, admin, or broad channel-read scopes.
 ## Stored data
 
 - Slack workspace ID, optional workspace name, bot user ID, installer user ID.
-- OAuth bot token, encrypted with AES-256-GCM when an encryption key is set.
+- OAuth bot token, stored only as versioned AES-256-GCM ciphertext bound to
+  the workspace id. TeamLoop does not save a token when `TOKEN_ENCRYPTION_KEY`
+  is absent. Ciphertext written before that binding can still be decrypted.
 - Slack channel ID and optional channel name.
 - Event title, type, time, location, notes, state, message timestamp, and
   activity-specific metadata.

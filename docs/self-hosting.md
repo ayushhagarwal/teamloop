@@ -4,12 +4,15 @@
 
 ```bash
 cp .env.example .env
-# Configure Slack credentials and public APP_BASE_URL
+# Configure Slack credentials, POSTGRES_PASSWORD, DATABASE_URL, and public APP_BASE_URL
 docker compose up -d --build
 ```
 
 The app container waits for PostgreSQL health, runs `prisma migrate deploy`,
-and starts TeamLoop. Persist the `teamloop-postgres` volume.
+and starts TeamLoop. Persist the `teamloop-postgres` volume. Postgres stays on
+the Compose network and is not published on the host. When the app uses that
+database, `DATABASE_URL` must use the hostname `postgres` and the same password
+as `POSTGRES_PASSWORD`. Replace the `CHANGE_ME` placeholder before deployment.
 
 ## Production checklist
 

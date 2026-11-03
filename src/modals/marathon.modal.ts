@@ -1,5 +1,6 @@
 import { EventType } from "@prisma/client";
 import type { CommandMetadata } from "../types/slack.types.js";
+import { FIELD_LIMITS } from "../utils/limits.js";
 import {
   buildActivityModal,
   callbackIdFor,
@@ -31,6 +32,7 @@ export const marathonModalConfig: ActivityModalConfig = {
       label: "Custom distance",
       kind: "text",
       optional: true,
+      maxLength: FIELD_LIMITS.customDistance,
     },
     { blockId: "targetPace", label: "Target pace", kind: "text", optional: true },
     {
