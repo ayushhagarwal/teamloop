@@ -24,7 +24,7 @@ function database() {
     ...tx,
     event: {
       ...tx.event,
-      findUnique: vi.fn().mockResolvedValue(eventFixture()),
+      findFirst: vi.fn().mockResolvedValue(eventFixture()),
     },
     $transaction: vi.fn(async (callback: (client: typeof tx) => unknown) =>
       callback(tx),
@@ -50,11 +50,16 @@ describe("EventService", () => {
     expect(tx.auditLog.create).toHaveBeenCalledOnce();
   });
 
-  it("updates an organizer-owned event", async () => {
+  it("updates an organizer-owned event in the signed workspace", async () => {
     const { db, tx } = database();
-    await new EventService(db).update("event_1", "U_ORGANIZER", {
+    await new EventService(db).update("event_1", "T1", "U_ORGANIZER", {
       title: "Updated lunch",
     });
+    expect(db.event.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "event_1", workspace: { slackTeamId: "T1" } },
+      }),
+    );
     expect(tx.event.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ title: "Updated lunch" }),
@@ -65,20 +70,28 @@ describe("EventService", () => {
   it("rejects invalid organizer actions", async () => {
     const { db } = database();
     await expect(
-      new EventService(db).cancel("event_1", "U_SOMEONE_ELSE"),
+      new EventService(db).cancel("event_1", "T1", "U_SOMEONE_ELSE"),
     ).rejects.toThrow("Only the organizer");
   });
 
   it("closes RSVP and cancels events without deleting them", async () => {
     const { db, tx } = database();
     const service = new EventService(db);
-    await service.closeRsvp("event_1", "U_ORGANIZER");
+    await service.closeRsvp("event_1", "T1", "U_ORGANIZER");
     expect(tx.event.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: EventStatus.RSVP_CLOSED }),
       }),
     );
-    await service.cancel("event_1", "U_ORGANIZER");
+    await service.cancel("event_1", "T1", "U_ORGANIZER");
     expect(tx.reminder.updateMany).toHaveBeenCalledOnce();
+  });
+
+  it("hides events that belong to another Slack workspace", async () => {
+    const { db } = database();
+    vi.mocked(db.event.findFirst).mockResolvedValueOnce(null);
+    await expect(new EventService(db).getById("event_1", "T_OTHER")).rejects.toThrow(
+      "no longer exists",
+    );
   });
 });

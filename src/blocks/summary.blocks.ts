@@ -1,7 +1,8 @@
 import { RsvpStatus } from "@prisma/client";
 import type { KnownBlock } from "@slack/types";
 import type { EventWithRelations } from "../types/event.types.js";
-import { escapeMrkdwn } from "../utils/text.js";
+import { FIELD_LIMITS } from "../utils/limits.js";
+import { escapeMrkdwn, truncate } from "../utils/text.js";
 import { divider, mrkdwnSection } from "./shared.blocks.js";
 
 export function renderSummary(event: EventWithRelations): KnownBlock[] {
@@ -13,19 +14,23 @@ export function renderSummary(event: EventWithRelations): KnownBlock[] {
   const maybe = byStatus(RsvpStatus.MAYBE);
   const cannot = byStatus(RsvpStatus.CANNOT_MAKE_IT);
 
-  const preferenceRows = event.preferences.map(
-    (preference) =>
-      `• <@${preference.slackUserId}> — ${
-        preference.key === "primary"
-          ? escapeMrkdwn(preference.value)
-          : `${escapeMrkdwn(preference.key)}: ${escapeMrkdwn(preference.value)}`
-      }`,
-  );
+  const preferenceRows = event.preferences.map((preference) => {
+    const value =
+      preference.key === "targetPace"
+        ? truncate(preference.value, FIELD_LIMITS.marathonPaceNote)
+        : preference.value;
+    return `• <@${preference.slackUserId}> — ${
+      preference.key === "primary"
+        ? escapeMrkdwn(value)
+        : `${escapeMrkdwn(preference.key)}: ${escapeMrkdwn(value)}`
+    }`;
+  });
   const potluckRows = event.potluckItems.map((item) => {
     const owner = item.claimedBySlackUserId
       ? `<@${item.claimedBySlackUserId}>`
       : "Unclaimed";
-    return `• *${escapeMrkdwn(item.category)}:* ${escapeMrkdwn(item.itemName)} — ${owner}`;
+    const name = escapeMrkdwn(truncate(item.itemName, FIELD_LIMITS.potluckItemName));
+    return `• *${escapeMrkdwn(item.category)}:* ${name} — ${owner}`;
   });
 
   return [

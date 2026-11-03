@@ -12,11 +12,19 @@ RUN npm run build
 FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --chown=node:node --from=build /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+# devDependencies such as eslint, vitest, tsx, and TypeScript are not copied
+# into this image. The Prisma CLI is only a devDependency, but the container
+# command runs `npm run prisma:migrate`, so install that CLI explicitly.
+RUN npm ci --omit=dev \
+  && npm install --no-save --omit=dev prisma@6.19.3 \
+  && rm -rf node_modules/typescript \
+  && rm -f node_modules/.bin/tsc node_modules/.bin/tsserver
+COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
+RUN npx prisma generate
 COPY --chown=node:node --from=build /app/dist ./dist
-COPY --chown=node:node --from=build /app/prisma ./prisma
-COPY --chown=node:node --from=build /app/prisma.config.ts ./prisma.config.ts
-COPY --chown=node:node package.json package-lock.json ./
+RUN chown -R node:node /app
 USER node
 EXPOSE 3000
 CMD ["sh", "-c", "npm run prisma:migrate && npm start"]

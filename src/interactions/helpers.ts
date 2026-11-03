@@ -1,4 +1,20 @@
 import type { SlackViewValues } from "../types/slack.types.js";
+import { NotFoundError } from "../utils/errors.js";
+
+export function signedSlackTeamId(body: unknown): string {
+  if (!body || typeof body !== "object") throw new NotFoundError();
+  const record = body as { team?: { id?: unknown } | null; team_id?: unknown };
+  if (
+    record.team &&
+    typeof record.team === "object" &&
+    typeof record.team.id === "string" &&
+    record.team.id
+  ) {
+    return record.team.id;
+  }
+  if (typeof record.team_id === "string" && record.team_id) return record.team_id;
+  throw new NotFoundError();
+}
 
 export function parseActionValue(action: unknown): { eventId: string; value?: string } {
   if (

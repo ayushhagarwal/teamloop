@@ -4,7 +4,7 @@ import { EventService } from "../services/event.service.js";
 import { RsvpService } from "../services/rsvp.service.js";
 import { SlackMessageService } from "../services/slack-message.service.js";
 import { toUserMessage } from "../utils/errors.js";
-import { parseActionValue } from "./helpers.js";
+import { parseActionValue, signedSlackTeamId } from "./helpers.js";
 
 const actions = [
   {
@@ -35,8 +35,9 @@ export function registerRsvpActions(
       await ack();
       try {
         const { eventId } = parseActionValue(action);
-        await rsvpService.upsert(eventId, body.user.id, definition.status);
-        const event = await eventService.getById(eventId);
+        const slackTeamId = signedSlackTeamId(body);
+        await rsvpService.upsert(eventId, slackTeamId, body.user.id, definition.status);
+        const event = await eventService.getById(eventId, slackTeamId);
         await messages.updateEvent(client, event);
         await respond({ response_type: "ephemeral", text: definition.confirmation });
       } catch (error) {

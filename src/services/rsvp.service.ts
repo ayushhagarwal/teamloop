@@ -1,5 +1,6 @@
-import { EventStatus, RsvpStatus, type PrismaClient, type RSVP } from "@prisma/client";
-import { EventStateError, NotFoundError } from "../utils/errors.js";
+import { RsvpStatus, type PrismaClient, type RSVP } from "@prisma/client";
+import { assertEventAcceptsResponses } from "../utils/event-state.js";
+import { NotFoundError } from "../utils/errors.js";
 
 export interface RsvpCounts {
   going: number;
@@ -12,20 +13,17 @@ export class RsvpService {
 
   async upsert(
     eventId: string,
+    slackTeamId: string,
     slackUserId: string,
     status: RsvpStatus,
   ): Promise<RSVP> {
     const event = await this.db.event.findUnique({
       where: { id: eventId },
-      select: { status: true },
+      select: { status: true, workspace: { select: { slackTeamId: true } } },
     });
-    if (!event) throw new NotFoundError();
-    if (event.status === EventStatus.CANCELLED) {
-      throw new EventStateError("This event has been cancelled.", "EVENT_CANCELLED");
-    }
-    if (event.status === EventStatus.RSVP_CLOSED) {
-      throw new EventStateError("RSVPs are closed for this event.", "RSVP_CLOSED");
-    }
+    if (!event || event.workspace.slackTeamId !== slackTeamId)
+      throw new NotFoundError();
+    assertEventAcceptsResponses(event.status);
 
     return this.db.rSVP.upsert({
       where: { eventId_slackUserId: { eventId, slackUserId } },

@@ -1,5 +1,6 @@
 import { EventType } from "@prisma/client";
 import type { CommandMetadata } from "../types/slack.types.js";
+import { FIELD_LIMITS } from "../utils/limits.js";
 import {
   buildActivityModal,
   callbackIdFor,
@@ -24,6 +25,7 @@ export const weekendRunModalConfig: ActivityModalConfig = {
       label: "Custom distance",
       kind: "text",
       optional: true,
+      maxLength: FIELD_LIMITS.customDistance,
     },
     {
       blockId: "pace",
@@ -32,7 +34,13 @@ export const weekendRunModalConfig: ActivityModalConfig = {
       options: ["Easy", "Moderate", "Fast", "Mixed groups"],
       initialValue: "Mixed groups",
     },
-    { blockId: "routeLink", label: "Route link", kind: "text", optional: true },
+    {
+      blockId: "routeLink",
+      label: "Route link",
+      kind: "text",
+      optional: true,
+      maxLength: FIELD_LIMITS.routeLink,
+    },
     {
       blockId: "beginnerFriendly",
       label: "Beginner friendly?",

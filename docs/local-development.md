@@ -12,12 +12,28 @@
 ```bash
 npm install
 cp .env.example .env
-docker compose up -d postgres
-npm run prisma:generate
-npm run prisma:migrate
 ```
 
-Add the signing secret and development workspace bot token to `.env`.
+Add the signing secret and development workspace bot token to `.env`. Replace
+`CHANGE_ME` in `POSTGRES_PASSWORD` and `DATABASE_URL`. Compose does not publish
+Postgres on the host. The sample `DATABASE_URL` uses the Compose hostname
+`postgres`, which the app container can resolve.
+
+Start the full stack from the repository root:
+
+```bash
+docker compose up --build
+```
+
+The app container runs `prisma migrate deploy` before it starts. To run the
+Node process on the host instead, point `DATABASE_URL` at a Postgres instance
+that is reachable from the host, then:
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev
+```
 
 ## Run
 

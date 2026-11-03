@@ -1,5 +1,6 @@
 import type { ModalView } from "@slack/types";
 import type { EventWithRelations } from "../types/event.types.js";
+import { FIELD_LIMITS } from "../utils/limits.js";
 
 export function buildPotluckItemModal(event: EventWithRelations): ModalView {
   const metadata = event.metadata as { neededCategories?: string[] };
@@ -27,7 +28,7 @@ export function buildPotluckItemModal(event: EventWithRelations): ModalView {
           })),
         },
       },
-      textInput("itemName", "Dish / item name"),
+      textInput("itemName", "Dish / item name", false, FIELD_LIMITS.potluckItemName),
       textInput("servesCount", "Serves how many", true),
       {
         type: "input",
@@ -43,17 +44,26 @@ export function buildPotluckItemModal(event: EventWithRelations): ModalView {
           })),
         },
       },
-      textInput("itemNotes", "Notes", true),
+      textInput("itemNotes", "Notes", true, FIELD_LIMITS.potluckItemNotes),
     ],
   };
 }
 
-function textInput(blockId: string, label: string, optional = false) {
+function textInput(
+  blockId: string,
+  label: string,
+  optional = false,
+  maxLength?: number,
+) {
   return {
     type: "input" as const,
     block_id: blockId,
     optional,
     label: { type: "plain_text" as const, text: label },
-    element: { type: "plain_text_input" as const, action_id: "value" },
+    element: {
+      type: "plain_text_input" as const,
+      action_id: "value",
+      ...(typeof maxLength === "number" ? { max_length: maxLength } : {}),
+    },
   };
 }

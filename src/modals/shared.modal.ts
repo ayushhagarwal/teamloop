@@ -9,6 +9,7 @@ export interface ModalField {
   kind: "text" | "select" | "boolean";
   optional?: boolean;
   multiline?: boolean;
+  maxLength?: number;
   placeholder?: string;
   initialValue?: string;
   options?: string[];
@@ -165,6 +166,7 @@ function renderField(field: ModalField): KnownBlock {
       action_id: field.actionId ?? "value",
       ...(field.initialValue ? { initial_value: field.initialValue } : {}),
       ...(field.multiline ? { multiline: true } : {}),
+      ...(typeof field.maxLength === "number" ? { max_length: field.maxLength } : {}),
       placeholder: {
         type: "plain_text",
         text: field.placeholder ?? `Enter ${field.label.toLowerCase()}`,
